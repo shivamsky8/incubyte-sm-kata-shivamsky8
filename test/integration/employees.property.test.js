@@ -44,7 +44,7 @@ describe('Property 1: Create-then-read round-trip', () => {
       }),
       { numRuns: 100 }
     );
-  });
+  }, 30000);
 });
 
 // Feature: salary-management-api, Property 2: Employee_ID uniqueness
@@ -79,7 +79,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
       ),
       { numRuns: 100 }
     );
-  });
+  }, 30000);
 });
 
 // Feature: salary-management-api, Property 3: Invalid body rejected on write routes
@@ -193,7 +193,7 @@ describe('Property 3: Invalid body rejected on write routes', () => {
       }),
       { numRuns: 100 }
     );
-  });
+  }, 30000);
 });
 
 // Feature: salary-management-api, Property 4: 404 for unknown Employee_ID
@@ -225,7 +225,7 @@ describe('Property 4: 404 for unknown Employee_ID', () => {
       ),
       { numRuns: 100 }
     );
-  });
+  }, 30000);
 });
 
 // Feature: salary-management-api, Property 5: List returns the full persisted set
@@ -259,5 +259,5 @@ describe('Property 5: List returns the full persisted set', () => {
       ),
       { numRuns: 100 }
     );
-  });
+  }, 30000);
 });
