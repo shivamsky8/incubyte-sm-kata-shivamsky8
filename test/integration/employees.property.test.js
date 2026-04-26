@@ -81,3 +81,117 @@ describe('Property 2: Employee_ID uniqueness', () => {
     );
   });
 });
+
+// Feature: salary-management-api, Property 3: Invalid body rejected on write routes
+// **Validates: Requirements 1.3, 1.4, 1.5, 3.3**
+describe('Property 3: Invalid body rejected on write routes', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  // Arbitrary that produces a field value that is either missing (undefined) or whitespace-only
+  const badStringArb = fc.oneof(
+    fc.constant(undefined),
+    fc.constant(null),
+    fc.array(fc.constantFrom(' ', '\t', '\n', '\r'), { minLength: 0, maxLength: 5 }).map((a) => a.join(''))
+  );
+
+  // Arbitrary that produces a bad gross_salary: missing, non-number, or negative
+  const badSalaryArb = fc.oneof(
+    fc.constant(undefined),
+    fc.constant(null),
+    fc.constant('not-a-number'),
+    fc.constant(true),
+    fc.integer({ min: -1_000_000, max: -1 }).map((n) => n / 100)
+  );
+
+  // Generate a body where at least one field is invalid.
+  // We pick each field from either a valid or bad arbitrary, then filter
+  // to ensure at least one field is actually bad.
+  const STRING_FIELDS = ['full_name', 'job_title', 'country'];
+
+  const validStringArb = fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0);
+  const validSalaryArb = fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100);
+
+  const invalidBodyArb = fc
+    .record({
+      full_name: fc.oneof(validStringArb, badStringArb),
+      job_title: fc.oneof(validStringArb, badStringArb),
+      country: fc.oneof(validStringArb, badStringArb),
+      gross_salary: fc.oneof(validSalaryArb, badSalaryArb),
+    })
+    .filter((body) => {
+      // At least one field must be invalid
+      const stringBad = STRING_FIELDS.some((f) => {
+        const v = body[f];
+        return v === undefined || v === null || typeof v !== 'string' || v.trim() === '';
+      });
+      const salaryBad = (() => {
+        const v = body.gross_salary;
+        return (
+          v === undefined ||
+          v === null ||
+          typeof v !== 'number' ||
+          !Number.isFinite(v) ||
+          v < 0
+        );
+      })();
+      return stringBad || salaryBad;
+    });
+
+  // Helper: compute which fields are expected to be flagged
+  function expectedBadFields(body) {
+    const fields = [];
+    for (const f of STRING_FIELDS) {
+      const v = body[f];
+      if (v === undefined || v === null || typeof v !== 'string' || v.trim() === '') {
+        fields.push(f);
+      }
+    }
+    const sv = body.gross_salary;
+    if (
+      sv === undefined ||
+      sv === null ||
+      typeof sv !== 'number' ||
+      !Number.isFinite(sv) ||
+      sv < 0
+    ) {
+      fields.push('gross_salary');
+    }
+    return fields;
+  }
+
+  it('POST returns 400 with details enumerating every offending field', async () => {
+    await fc.assert(
+      fc.asyncProperty(invalidBodyArb, async (body) => {
+        // Build a clean payload (strip undefined keys so JSON.stringify omits them)
+        const payload = {};
+        for (const [k, v] of Object.entries(body)) {
+          if (v !== undefined) payload[k] = v;
+        }
+
+        const res = await request(app).post('/employees').send(payload);
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe('VALIDATION_ERROR');
+
+        const expected = expectedBadFields(body);
+        const actualFields = res.body.error.details.map((d) => d.field);
+
+        for (const f of expected) {
+          expect(actualFields).toContain(f);
+        }
+        expect(actualFields).toHaveLength(expected.length);
+      }),
+      { numRuns: 100 }
+    );
+  });
+});
