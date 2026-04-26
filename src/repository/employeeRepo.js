@@ -21,6 +21,9 @@ export function createRepo(db) {
   );
   const selectByIdStmt = db.prepare('SELECT * FROM employees WHERE id = ?');
   const selectAllStmt = db.prepare('SELECT * FROM employees');
+  const updateStmt = db.prepare(
+    'UPDATE employees SET full_name = ?, job_title = ?, country = ?, gross_salary = ? WHERE id = ?'
+  );
 
   return {
     create(data) {
@@ -49,6 +52,21 @@ export function createRepo(db) {
 
     findAll() {
       return selectAllStmt.all().map(toApi);
+    },
+
+    update(id, data) {
+      const existing = selectByIdStmt.get(id);
+      if (!existing) {
+        throw new NotFoundError(`Employee ${id} not found`);
+      }
+
+      const full_name = data.full_name.trim();
+      const job_title = data.job_title.trim();
+      const country = data.country.trim();
+      const gross_salary = roundHalfUp(data.gross_salary);
+
+      updateStmt.run(full_name, job_title, country, gross_salary, id);
+      return toApi({ id, full_name, job_title, country, gross_salary });
     },
   };
 }

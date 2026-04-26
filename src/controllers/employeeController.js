@@ -34,5 +34,15 @@ export function employeeController(repo) {
         next(err);
       }
     },
+
+    update(req, res, next) {
+      try {
+        validateEmployeeBody(req.body);
+        const employee = repo.update(Number(req.params.id), req.body);
+        res.json(employee);
+      } catch (err) {
+        next(err);
+      }
+    },
   };
 }

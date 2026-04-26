@@ -239,3 +239,82 @@ describe('POST /employees — invalid JSON', () => {
     expect(res.body.error.message).toBeDefined();
   });
 });
+
+describe('PUT /employees/:id', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns 200 with updated fields and same Employee_ID', async () => {
+    const original = {
+      full_name: 'Alice Smith',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 75000.50,
+    };
+
+    const createRes = await request(app).post('/employees').send(original).expect(201);
+    const id = createRes.body.Employee_ID;
+
+    const updated = {
+      full_name: 'Alice Johnson',
+      job_title: 'Senior Engineer',
+      country: 'United States',
+      gross_salary: 95000.75,
+    };
+
+    const res = await request(app).put(`/employees/${id}`).send(updated).expect(200);
+
+    expect(res.body).toMatchObject({
+      Employee_ID: id,
+      full_name: 'Alice Johnson',
+      job_title: 'Senior Engineer',
+      country: 'United States',
+      gross_salary: 95000.75,
+    });
+  });
+
+  it('returns 404 NOT_FOUND for a non-existent id', async () => {
+    const payload = {
+      full_name: 'Alice',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 50000,
+    };
+
+    const res = await request(app).put('/employees/999').send(payload).expect(404);
+
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toBeDefined();
+  });
+
+  it('returns 400 VALIDATION_ERROR for invalid body', async () => {
+    const createRes = await request(app).post('/employees').send({
+      full_name: 'Alice',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 50000,
+    }).expect(201);
+    const id = createRes.body.Employee_ID;
+
+    const res = await request(app).put(`/employees/${id}`).send({}).expect(400);
+
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: 'full_name' }),
+        expect.objectContaining({ field: 'job_title' }),
+        expect.objectContaining({ field: 'country' }),
+        expect.objectContaining({ field: 'gross_salary' }),
+      ])
+    );
+  });
+});

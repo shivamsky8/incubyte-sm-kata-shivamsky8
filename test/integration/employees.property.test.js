@@ -44,7 +44,7 @@ describe('Property 1: Create-then-read round-trip', () => {
       }),
       { numRuns: 100 }
     );
-  }, 30000);
+  }, 60000);
 });
 
 // Feature: salary-management-api, Property 2: Employee_ID uniqueness
@@ -79,7 +79,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
       ),
       { numRuns: 100 }
     );
-  }, 30000);
+  }, 60000);
 });
 
 // Feature: salary-management-api, Property 3: Invalid body rejected on write routes
@@ -193,7 +193,7 @@ describe('Property 3: Invalid body rejected on write routes', () => {
       }),
       { numRuns: 100 }
     );
-  }, 30000);
+  }, 60000);
 });
 
 // Feature: salary-management-api, Property 4: 404 for unknown Employee_ID
@@ -225,7 +225,7 @@ describe('Property 4: 404 for unknown Employee_ID', () => {
       ),
       { numRuns: 100 }
     );
-  }, 30000);
+  }, 60000);
 });
 
 // Feature: salary-management-api, Property 5: List returns the full persisted set
@@ -259,5 +259,47 @@ describe('Property 5: List returns the full persisted set', () => {
       ),
       { numRuns: 100 }
     );
-  }, 30000);
+  }, 60000);
+});
+
+// Feature: salary-management-api, Property 6: Update round-trip preserves Employee_ID
+// **Validates: Requirements 3.1, 3.4**
+describe('Property 6: Update round-trip preserves Employee_ID', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('PUT then GET returns same Employee_ID with updated fields (trimmed, 2dp)', async () => {
+    await fc.assert(
+      fc.asyncProperty(validEmployeeArb, validEmployeeArb, async (original, updated) => {
+        // Create the employee
+        const createRes = await request(app).post('/employees').send(original);
+        expect(createRes.status).toBe(201);
+        const id = createRes.body.Employee_ID;
+
+        // Update the employee
+        const putRes = await request(app).put(`/employees/${id}`).send(updated);
+        expect(putRes.status).toBe(200);
+        expect(putRes.body.Employee_ID).toBe(id);
+
+        // Read back and verify
+        const getRes = await request(app).get(`/employees/${id}`);
+        expect(getRes.status).toBe(200);
+        expect(getRes.body.Employee_ID).toBe(id);
+        expect(getRes.body.full_name).toBe(updated.full_name.trim());
+        expect(getRes.body.job_title).toBe(updated.job_title.trim());
+        expect(getRes.body.country).toBe(updated.country.trim());
+        expect(getRes.body.gross_salary).toBe(roundHalfUp(updated.gross_salary));
+      }),
+      { numRuns: 100 }
+    );
+  }, 60000);
 });

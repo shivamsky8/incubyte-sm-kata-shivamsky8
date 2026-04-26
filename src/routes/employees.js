@@ -15,6 +15,7 @@ export function employeesRouter(db) {
   router.post('/', ctrl.create);
   router.get('/', ctrl.list);
   router.get('/:id', ctrl.getById);
+  router.put('/:id', ctrl.update);
 
   return router;
 }
