@@ -133,6 +133,88 @@ describe('POST /employees — validation errors', () => {
   });
 });
 
+describe('GET /employees/:id', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns 200 with the employee for an existing id', async () => {
+    const payload = {
+      full_name: 'Alice Smith',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 75000.50,
+    };
+
+    const createRes = await request(app).post('/employees').send(payload).expect(201);
+    const id = createRes.body.Employee_ID;
+
+    const res = await request(app).get(`/employees/${id}`).expect(200);
+
+    expect(res.body).toMatchObject({
+      Employee_ID: id,
+      full_name: 'Alice Smith',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 75000.50,
+    });
+  });
+
+  it('returns 404 with NOT_FOUND for a non-existent id', async () => {
+    const res = await request(app).get('/employees/999').expect(404);
+
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toBeDefined();
+  });
+});
+
+describe('GET /employees', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns 200 with array of all employees', async () => {
+    const p1 = { full_name: 'Alice', job_title: 'Engineer', country: 'India', gross_salary: 50000 };
+    const p2 = { full_name: 'Bob', job_title: 'Designer', country: 'United States', gross_salary: 60000 };
+
+    const r1 = await request(app).post('/employees').send(p1).expect(201);
+    const r2 = await request(app).post('/employees').send(p2).expect(201);
+
+    const res = await request(app).get('/employees').expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(2);
+    expect(res.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ Employee_ID: r1.body.Employee_ID }),
+        expect.objectContaining({ Employee_ID: r2.body.Employee_ID }),
+      ])
+    );
+  });
+
+  it('returns 200 with empty array when no employees exist', async () => {
+    const res = await request(app).get('/employees').expect(200);
+
+    expect(res.body).toEqual([]);
+  });
+});
+
 describe('POST /employees — invalid JSON', () => {
   let db;
   let app;

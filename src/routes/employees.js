@@ -13,6 +13,8 @@ export function employeesRouter(db) {
   const ctrl = employeeController(repo);
 
   router.post('/', ctrl.create);
+  router.get('/', ctrl.list);
+  router.get('/:id', ctrl.getById);
 
   return router;
 }

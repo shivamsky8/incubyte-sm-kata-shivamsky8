@@ -16,5 +16,23 @@ export function employeeController(repo) {
         next(err);
       }
     },
+
+    getById(req, res, next) {
+      try {
+        const employee = repo.findById(Number(req.params.id));
+        res.json(employee);
+      } catch (err) {
+        next(err);
+      }
+    },
+
+    list(_req, res, next) {
+      try {
+        const employees = repo.findAll();
+        res.json(employees);
+      } catch (err) {
+        next(err);
+      }
+    },
   };
 }

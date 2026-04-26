@@ -195,3 +195,69 @@ describe('Property 3: Invalid body rejected on write routes', () => {
     );
   });
 });
+
+// Feature: salary-management-api, Property 4: 404 for unknown Employee_ID
+// **Validates: Requirements 2.2, 3.2, 4.2, 6.5**
+describe('Property 4: 404 for unknown Employee_ID', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('GET /employees/:id returns 404 NOT_FOUND for any non-existent id', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 1_000_000 }),
+        async (id) => {
+          const res = await request(app).get(`/employees/${id}`);
+
+          expect(res.status).toBe(404);
+          expect(res.body.error.code).toBe('NOT_FOUND');
+          expect(res.body.error.message).toBeDefined();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+// Feature: salary-management-api, Property 5: List returns the full persisted set
+// **Validates: Requirements 2.3**
+describe('Property 5: List returns the full persisted set', () => {
+  it('GET /employees returns exactly the set of created employees', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(validEmployeeArb, { minLength: 0, maxLength: 10 }),
+        async (payloads) => {
+          // Fresh DB per iteration so previous runs don't leak
+          const db = openDb(':memory:');
+          const app = createApp({ db });
+
+          const createdIds = [];
+          for (const payload of payloads) {
+            const res = await request(app).post('/employees').send(payload);
+            expect(res.status).toBe(201);
+            createdIds.push(res.body.Employee_ID);
+          }
+
+          const listRes = await request(app).get('/employees');
+          expect(listRes.status).toBe(200);
+          expect(Array.isArray(listRes.body)).toBe(true);
+
+          const listedIds = listRes.body.map((e) => e.Employee_ID);
+          expect(listedIds.sort()).toEqual(createdIds.sort());
+
+          db.close();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});

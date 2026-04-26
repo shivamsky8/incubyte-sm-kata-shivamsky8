@@ -1,4 +1,5 @@
 import { roundHalfUp } from '../util/money.js';
+import { NotFoundError } from '../errors/index.js';
 
 /**
  * Map a SQLite row (with `id`) to the API shape (with `Employee_ID`).
@@ -18,6 +19,8 @@ export function createRepo(db) {
   const insertStmt = db.prepare(
     'INSERT INTO employees (full_name, job_title, country, gross_salary) VALUES (?, ?, ?, ?)'
   );
+  const selectByIdStmt = db.prepare('SELECT * FROM employees WHERE id = ?');
+  const selectAllStmt = db.prepare('SELECT * FROM employees');
 
   return {
     create(data) {
@@ -34,6 +37,18 @@ export function createRepo(db) {
         country,
         gross_salary,
       });
+    },
+
+    findById(id) {
+      const row = selectByIdStmt.get(id);
+      if (!row) {
+        throw new NotFoundError(`Employee ${id} not found`);
+      }
+      return toApi(row);
+    },
+
+    findAll() {
+      return selectAllStmt.all().map(toApi);
     },
   };
 }
