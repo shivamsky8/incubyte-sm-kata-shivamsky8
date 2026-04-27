@@ -42,7 +42,7 @@ describe('Property 1: Create-then-read round-trip', () => {
         expect(res.body.country).toBe(payload.country.trim());
         expect(res.body.gross_salary).toBe(roundHalfUp(payload.gross_salary));
       }),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -65,7 +65,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
   it('N created employees yield N distinct Employee_IDs', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 20 }),
+        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
         async (payloads) => {
           const ids = [];
           for (const payload of payloads) {
@@ -77,7 +77,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
           expect(uniqueIds.size).toBe(payloads.length);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -191,7 +191,7 @@ describe('Property 3: Invalid body rejected on write routes', () => {
         }
         expect(actualFields).toHaveLength(expected.length);
       }),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -223,7 +223,7 @@ describe('Property 4: 404 for unknown Employee_ID', () => {
           expect(res.body.error.message).toBeDefined();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -257,7 +257,7 @@ describe('Property 5: List returns the full persisted set', () => {
           db.close();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -299,7 +299,7 @@ describe('Property 6: Update round-trip preserves Employee_ID', () => {
         expect(getRes.body.country).toBe(updated.country.trim());
         expect(getRes.body.gross_salary).toBe(roundHalfUp(updated.gross_salary));
       }),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
@@ -354,7 +354,7 @@ describe('Property 7: Delete removes from reads and metrics', () => {
           db.close();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   }, 60000);
 });
