@@ -1,4 +1,5 @@
 import { employeesRouter } from './employees.js';
+import { metricsRouter } from './metrics.js';
 
 /**
  * Mount all route groups on the given Express app.
@@ -8,4 +9,5 @@ import { employeesRouter } from './employees.js';
  */
 export function mountRoutes(app, db) {
   app.use('/employees', employeesRouter(db));
+  app.use('/metrics', metricsRouter(db));
 }

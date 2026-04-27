@@ -77,5 +77,25 @@ export function createRepo(db) {
       }
       deleteStmt.run(id);
     },
+
+    countryMetrics(country) {
+      const stmt = db.prepare(
+        `SELECT
+           COUNT(*) AS employee_count,
+           MIN(gross_salary) AS minimum_salary,
+           MAX(gross_salary) AS maximum_salary,
+           AVG(gross_salary) AS average_salary
+         FROM employees
+         WHERE country = ? COLLATE NOCASE`
+      );
+      const row = stmt.get(country);
+      return {
+        country,
+        employee_count: row.employee_count,
+        minimum_salary: row.employee_count === 0 ? null : row.minimum_salary,
+        maximum_salary: row.employee_count === 0 ? null : row.maximum_salary,
+        average_salary: row.employee_count === 0 ? null : roundHalfUp(row.average_salary),
+      };
+    },
   };
 }
