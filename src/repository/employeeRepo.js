@@ -24,6 +24,7 @@ export function createRepo(db) {
   const updateStmt = db.prepare(
     'UPDATE employees SET full_name = ?, job_title = ?, country = ?, gross_salary = ? WHERE id = ?'
   );
+  const deleteStmt = db.prepare('DELETE FROM employees WHERE id = ?');
 
   return {
     create(data) {
@@ -67,6 +68,14 @@ export function createRepo(db) {
 
       updateStmt.run(full_name, job_title, country, gross_salary, id);
       return toApi({ id, full_name, job_title, country, gross_salary });
+    },
+
+    remove(id) {
+      const existing = selectByIdStmt.get(id);
+      if (!existing) {
+        throw new NotFoundError(`Employee ${id} not found`);
+      }
+      deleteStmt.run(id);
     },
   };
 }

@@ -318,3 +318,58 @@ describe('PUT /employees/:id', () => {
     );
   });
 });
+
+describe('DELETE /employees/:id', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns 204 with empty body for an existing employee', async () => {
+    const payload = {
+      full_name: 'Alice Smith',
+      job_title: 'Engineer',
+      country: 'India',
+      gross_salary: 75000.50,
+    };
+
+    const createRes = await request(app).post('/employees').send(payload).expect(201);
+    const id = createRes.body.Employee_ID;
+
+    const res = await request(app).delete(`/employees/${id}`).expect(204);
+
+    expect(res.body).toEqual({});
+  });
+
+  it('returns 404 NOT_FOUND for a non-existent id', async () => {
+    const res = await request(app).delete('/employees/999').expect(404);
+
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toBeDefined();
+  });
+
+  it('subsequent GET returns 404 after deletion', async () => {
+    const payload = {
+      full_name: 'Bob Jones',
+      job_title: 'Designer',
+      country: 'United States',
+      gross_salary: 60000,
+    };
+
+    const createRes = await request(app).post('/employees').send(payload).expect(201);
+    const id = createRes.body.Employee_ID;
+
+    await request(app).delete(`/employees/${id}`).expect(204);
+
+    const getRes = await request(app).get(`/employees/${id}`).expect(404);
+
+    expect(getRes.body.error.code).toBe('NOT_FOUND');
+  });
+});

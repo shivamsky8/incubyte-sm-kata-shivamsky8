@@ -303,3 +303,58 @@ describe('Property 6: Update round-trip preserves Employee_ID', () => {
     );
   }, 60000);
 });
+
+// Feature: salary-management-api, Property 7: Delete removes from reads and metrics
+// **Validates: Requirements 4.1, 4.3**
+describe('Property 7: Delete removes from reads and metrics', () => {
+  it('after DELETE, GET returns 404 and list omits the deleted employee', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(validEmployeeArb, { minLength: 1, maxLength: 10 }),
+        fc.nat().map((n) => n),
+        async (payloads, pickIndex) => {
+          // Fresh DB per iteration
+          const db = openDb(':memory:');
+          const app = createApp({ db });
+
+          // Create all employees
+          const created = [];
+          for (const payload of payloads) {
+            const res = await request(app).post('/employees').send(payload);
+            expect(res.status).toBe(201);
+            created.push(res.body);
+          }
+
+          // Pick one to delete
+          const targetIdx = pickIndex % created.length;
+          const target = created[targetIdx];
+
+          // Delete it
+          const delRes = await request(app).delete(`/employees/${target.Employee_ID}`);
+          expect(delRes.status).toBe(204);
+          expect(delRes.body).toEqual({});
+
+          // GET by id should return 404
+          const getRes = await request(app).get(`/employees/${target.Employee_ID}`);
+          expect(getRes.status).toBe(404);
+          expect(getRes.body.error.code).toBe('NOT_FOUND');
+
+          // List should omit the deleted employee
+          const listRes = await request(app).get('/employees');
+          expect(listRes.status).toBe(200);
+          const listedIds = listRes.body.map((e) => e.Employee_ID);
+          expect(listedIds).not.toContain(target.Employee_ID);
+
+          // Remaining employees should still be present
+          const remainingIds = created
+            .filter((_, i) => i !== targetIdx)
+            .map((e) => e.Employee_ID);
+          expect(listedIds.sort()).toEqual(remainingIds.sort());
+
+          db.close();
+        }
+      ),
+      { numRuns: 100 }
+    );
+  }, 60000);
+});

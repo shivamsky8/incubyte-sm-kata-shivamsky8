@@ -44,5 +44,14 @@ export function employeeController(repo) {
         next(err);
       }
     },
+
+    remove(req, res, next) {
+      try {
+        repo.remove(Number(req.params.id));
+        res.status(204).end();
+      } catch (err) {
+        next(err);
+      }
+    },
   };
 }
