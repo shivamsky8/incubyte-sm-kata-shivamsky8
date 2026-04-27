@@ -9,5 +9,8 @@ export function createMetricsService(repo) {
     countryMetrics(country) {
       return repo.countryMetrics(country);
     },
+    jobTitleMetrics(jobTitle) {
+      return repo.jobTitleMetrics(jobTitle);
+    },
   };
 }

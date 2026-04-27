@@ -78,6 +78,22 @@ export function createRepo(db) {
       deleteStmt.run(id);
     },
 
+    jobTitleMetrics(jobTitle) {
+      const stmt = db.prepare(
+        `SELECT
+           COUNT(*) AS employee_count,
+           AVG(gross_salary) AS average_salary
+         FROM employees
+         WHERE job_title = ? COLLATE NOCASE`
+      );
+      const row = stmt.get(jobTitle);
+      return {
+        job_title: jobTitle,
+        employee_count: row.employee_count,
+        average_salary: row.employee_count === 0 ? null : roundHalfUp(row.average_salary),
+      };
+    },
+
     countryMetrics(country) {
       const stmt = db.prepare(
         `SELECT

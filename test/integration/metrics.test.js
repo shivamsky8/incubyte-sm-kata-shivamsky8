@@ -264,3 +264,211 @@ describe('Property 13: Required non-empty query parameter (country)', () => {
     );
   }, 60000);
 });
+
+
+// ---------------------------------------------------------------------------
+// Integration tests for GET /metrics/job-title (Task 16.1)
+// ---------------------------------------------------------------------------
+
+describe('GET /metrics/job-title — integration', () => {
+  let db;
+  let app;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    app = createApp({ db });
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns aggregated metrics for a matching job title', async () => {
+    await request(app).post('/employees').send({
+      full_name: 'Alice', job_title: 'Engineer', country: 'India', gross_salary: 50000,
+    }).expect(201);
+    await request(app).post('/employees').send({
+      full_name: 'Bob', job_title: 'Engineer', country: 'United States', gross_salary: 70000,
+    }).expect(201);
+    await request(app).post('/employees').send({
+      full_name: 'Charlie', job_title: 'Designer', country: 'India', gross_salary: 90000,
+    }).expect(201);
+
+    const res = await request(app).get('/metrics/job-title?job_title=Engineer').expect(200);
+
+    expect(res.body).toEqual({
+      job_title: 'Engineer',
+      employee_count: 2,
+      average_salary: 60000,
+    });
+  });
+
+  it('returns count 0 and null average for zero-match job title', async () => {
+    const res = await request(app).get('/metrics/job-title?job_title=Astronaut').expect(200);
+
+    expect(res.body).toEqual({
+      job_title: 'Astronaut',
+      employee_count: 0,
+      average_salary: null,
+    });
+  });
+
+  it('returns 400 VALIDATION_ERROR when job_title param is missing', async () => {
+    const res = await request(app).get('/metrics/job-title').expect(400);
+
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.message).toBeDefined();
+  });
+
+  it('returns 400 VALIDATION_ERROR when job_title param is empty', async () => {
+    const res = await request(app).get('/metrics/job-title?job_title=').expect(400);
+
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 VALIDATION_ERROR when job_title param is whitespace-only', async () => {
+    const res = await request(app).get('/metrics/job-title?job_title=%20%20').expect(400);
+
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('matches job title case-insensitively', async () => {
+    await request(app).post('/employees').send({
+      full_name: 'Priya', job_title: 'Engineer', country: 'India', gross_salary: 80000,
+    }).expect(201);
+
+    const res = await request(app).get('/metrics/job-title?job_title=ENGINEER').expect(200);
+
+    expect(res.body.employee_count).toBe(1);
+    expect(res.body.average_salary).toBe(80000);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Shared arbitrary for job titles
+// ---------------------------------------------------------------------------
+
+const jobTitleArb = fc.constantFrom('Engineer', 'Designer', 'Analyst', 'Manager', 'Intern');
+
+const validEmployeeWithJobTitleArb = fc.record({
+  full_name: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+  job_title: jobTitleArb,
+  country: countryArb,
+  gross_salary: fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100),
+});
+
+// ---------------------------------------------------------------------------
+// Feature: salary-management-api, Property 10: Metrics equal reference aggregation (job title)
+// **Validates: Requirements 8.1, 8.2**
+// ---------------------------------------------------------------------------
+
+describe('Property 10: Metrics equal reference aggregation (job title)', () => {
+  it('endpoint response matches JS reference aggregation', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.array(validEmployeeWithJobTitleArb, { minLength: 1, maxLength: 8 }),
+        jobTitleArb,
+        async (payloads, queryJobTitle) => {
+          const db = openDb(':memory:');
+          const app = createApp({ db });
+
+          // Populate
+          for (const p of payloads) {
+            const r = await request(app).post('/employees').send(p);
+            expect(r.status).toBe(201);
+          }
+
+          // Reference aggregation in JS
+          const matched = payloads.filter(
+            (p) => p.job_title.toLowerCase() === queryJobTitle.toLowerCase()
+          );
+          const expectedCount = matched.length;
+          let expectedAvg = null;
+
+          if (expectedCount > 0) {
+            const salaries = matched.map((p) => roundHalfUp(p.gross_salary));
+            const sum = salaries.reduce((a, b) => a + b, 0);
+            expectedAvg = roundHalfUp(sum / expectedCount);
+          }
+
+          const res = await request(app)
+            .get(`/metrics/job-title?job_title=${encodeURIComponent(queryJobTitle)}`)
+            .expect(200);
+
+          expect(res.body.job_title).toBe(queryJobTitle);
+          expect(res.body.employee_count).toBe(expectedCount);
+          expect(res.body.average_salary).toBe(expectedAvg);
+
+          db.close();
+        }
+      ),
+      { numRuns: 20 }
+    );
+  }, 60000);
+});
+
+// ---------------------------------------------------------------------------
+// Feature: salary-management-api, Property 11: Zero-match metrics shape (job title)
+// **Validates: Requirements 8.3**
+// ---------------------------------------------------------------------------
+
+describe('Property 11: Zero-match metrics shape (job title)', () => {
+  it('non-existent job title returns count 0 and null average', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+        async (jobTitle) => {
+          const db = openDb(':memory:');
+          const app = createApp({ db });
+
+          const res = await request(app)
+            .get(`/metrics/job-title?job_title=${encodeURIComponent(jobTitle)}`)
+            .expect(200);
+
+          expect(res.body.job_title).toBe(jobTitle.trim());
+          expect(res.body.employee_count).toBe(0);
+          expect(res.body.average_salary).toBeNull();
+
+          db.close();
+        }
+      ),
+      { numRuns: 20 }
+    );
+  }, 60000);
+});
+
+// ---------------------------------------------------------------------------
+// Feature: salary-management-api, Property 13: Required non-empty query parameter (job title)
+// **Validates: Requirements 8.4**
+// ---------------------------------------------------------------------------
+
+describe('Property 13: Required non-empty query parameter (job title)', () => {
+  it('omitting or sending empty job_title param returns 400 VALIDATION_ERROR', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.oneof(
+          // No job_title param at all
+          fc.constant('/metrics/job-title'),
+          // Empty string
+          fc.constant('/metrics/job-title?job_title='),
+          // Whitespace-only
+          fc.array(fc.constantFrom(' ', '\t'), { minLength: 1, maxLength: 5 })
+            .map((a) => `/metrics/job-title?job_title=${encodeURIComponent(a.join(''))}`)
+        ),
+        async (url) => {
+          const db = openDb(':memory:');
+          const app = createApp({ db });
+
+          const res = await request(app).get(url);
+
+          expect(res.status).toBe(400);
+          expect(res.body.error.code).toBe('VALIDATION_ERROR');
+
+          db.close();
+        }
+      ),
+      { numRuns: 20 }
+    );
+  }, 60000);
+});

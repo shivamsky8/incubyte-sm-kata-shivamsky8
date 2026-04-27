@@ -16,5 +16,14 @@ export function metricsController(metricsService) {
         next(err);
       }
     },
+    getJobTitleMetrics(req, res, next) {
+      try {
+        const jobTitle = requireNonEmptyQueryParam(req, 'job_title');
+        const metrics = metricsService.jobTitleMetrics(jobTitle);
+        res.json(metrics);
+      } catch (err) {
+        next(err);
+      }
+    },
   };
 }

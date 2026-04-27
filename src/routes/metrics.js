@@ -15,6 +15,7 @@ export function metricsRouter(db) {
   const ctrl = metricsController(service);
 
   router.get('/country', ctrl.getCountryMetrics);
+  router.get('/job-title', ctrl.getJobTitleMetrics);
 
   return router;
 }
