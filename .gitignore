@@ -1,0 +1,30 @@
+# Kiro spec/workspace files (kept local, not committed)
+.kiro/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build / coverage
+dist/
+coverage/
+.nyc_output/
+
+# Env
+.env
+.env.local
+
+# Runtime data (SQLite file created at runtime)
+data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
