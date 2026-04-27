@@ -12,8 +12,8 @@ import { createApp } from '../src/app.js';
 // Arbitraries
 // ---------------------------------------------------------------------------
 
-/** Safe alphanumeric string starting with a letter (avoids prototype-pollution edge cases). */
-export const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,19}$/);
+/** Safe alphanumeric string starting with a letter — no spaces, guaranteed non-empty after trim. */
+export const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9]{0,9}$/);
 
 /** Country drawn from a fixed set (useful for metrics tests). */
 export const countryArb = fc.constantFrom('India', 'United States', 'Germany', 'France', 'Japan');

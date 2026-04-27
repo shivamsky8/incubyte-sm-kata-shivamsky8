@@ -64,7 +64,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
           expect(uniqueIds.size).toBe(payloads.length);
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });

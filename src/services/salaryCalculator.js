@@ -13,7 +13,7 @@ export const RATES = {
  */
 export function calculate(grossSalary, country) {
   const key = country.trim().toLowerCase();
-  const rate = RATES[key];
+  const rate = Object.hasOwn(RATES, key) ? RATES[key] : undefined;
 
   if (rate !== undefined) {
     const tds = roundHalfUp(grossSalary * rate);
