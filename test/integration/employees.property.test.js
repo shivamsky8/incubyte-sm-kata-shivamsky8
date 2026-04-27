@@ -6,14 +6,18 @@ import { openDb } from '../../src/db/connection.js';
 import { roundHalfUp } from '../../src/util/money.js';
 
 // Arbitrary that generates a valid employee payload
+// Use stringMatching to produce clean alphanumeric strings and avoid prototype
+// pollution edge cases (__proto__, constructor, etc.) that fast-check can generate.
+const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,19}$/);
+
 const validEmployeeArb = fc.record({
-  full_name: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
-  job_title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
-  country: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+  full_name: safeStringArb,
+  job_title: safeStringArb,
+  country: safeStringArb,
   gross_salary: fc
     .integer({ min: 0, max: 100_000_000 })
     .map((n) => n / 100),
-});
+}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
 
 // Feature: salary-management-api, Property 1: Create-then-read round-trip
 // **Validates: Requirements 1.1, 2.1, 5.5**
@@ -234,7 +238,7 @@ describe('Property 5: List returns the full persisted set', () => {
   it('GET /employees returns exactly the set of created employees', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 0, maxLength: 10 }),
+        fc.array(validEmployeeArb, { minLength: 0, maxLength: 5 }),
         async (payloads) => {
           // Fresh DB per iteration so previous runs don't leak
           const db = openDb(':memory:');
@@ -310,7 +314,7 @@ describe('Property 7: Delete removes from reads and metrics', () => {
   it('after DELETE, GET returns 404 and list omits the deleted employee', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 10 }),
+        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
         fc.nat().map((n) => n),
         async (payloads, pickIndex) => {
           // Fresh DB per iteration

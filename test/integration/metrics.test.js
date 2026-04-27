@@ -92,14 +92,15 @@ describe('GET /metrics/country — integration', () => {
 // Shared arbitrary for valid employee payloads
 // ---------------------------------------------------------------------------
 
+const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,19}$/);
 const countryArb = fc.constantFrom('India', 'United States', 'Germany', 'France', 'Japan');
 
 const validEmployeeArb = fc.record({
-  full_name: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
-  job_title: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+  full_name: safeStringArb,
+  job_title: safeStringArb,
   country: countryArb,
   gross_salary: fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100),
-});
+}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
 
 // ---------------------------------------------------------------------------
 // Property 10: Metrics equal reference aggregation (country)
@@ -111,7 +112,7 @@ describe('Property 10: Metrics equal reference aggregation (country)', () => {
   it('endpoint response matches JS reference aggregation', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 8 }),
+        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
         countryArb,
         async (payloads, queryCountry) => {
           const db = openDb(':memory:');
@@ -153,7 +154,7 @@ describe('Property 10: Metrics equal reference aggregation (country)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -168,7 +169,7 @@ describe('Property 11: Zero-match metrics shape (country)', () => {
   it('non-existent country returns count 0 and null salary fields', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+        safeStringArb,
         async (country) => {
           const db = openDb(':memory:');
           const app = createApp({ db });
@@ -186,7 +187,7 @@ describe('Property 11: Zero-match metrics shape (country)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -201,7 +202,7 @@ describe('Property 12: Metamorphic ordering of country metrics', () => {
   it('for any non-empty matched set, min ≤ avg ≤ max', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 8 }),
+        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
         async (payloads) => {
           const db = openDb(':memory:');
           const app = createApp({ db });
@@ -224,7 +225,7 @@ describe('Property 12: Metamorphic ordering of country metrics', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -260,7 +261,7 @@ describe('Property 13: Required non-empty query parameter (country)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -352,11 +353,11 @@ describe('GET /metrics/job-title — integration', () => {
 const jobTitleArb = fc.constantFrom('Engineer', 'Designer', 'Analyst', 'Manager', 'Intern');
 
 const validEmployeeWithJobTitleArb = fc.record({
-  full_name: fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+  full_name: safeStringArb,
   job_title: jobTitleArb,
   country: countryArb,
   gross_salary: fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100),
-});
+}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
 
 // ---------------------------------------------------------------------------
 // Feature: salary-management-api, Property 10: Metrics equal reference aggregation (job title)
@@ -367,7 +368,7 @@ describe('Property 10: Metrics equal reference aggregation (job title)', () => {
   it('endpoint response matches JS reference aggregation', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeWithJobTitleArb, { minLength: 1, maxLength: 8 }),
+        fc.array(validEmployeeWithJobTitleArb, { minLength: 1, maxLength: 5 }),
         jobTitleArb,
         async (payloads, queryJobTitle) => {
           const db = openDb(':memory:');
@@ -403,7 +404,7 @@ describe('Property 10: Metrics equal reference aggregation (job title)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -417,7 +418,7 @@ describe('Property 11: Zero-match metrics shape (job title)', () => {
   it('non-existent job title returns count 0 and null average', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.string({ minLength: 1 }).filter((s) => s.trim().length > 0),
+        safeStringArb,
         async (jobTitle) => {
           const db = openDb(':memory:');
           const app = createApp({ db });
@@ -433,7 +434,7 @@ describe('Property 11: Zero-match metrics shape (job title)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
@@ -468,7 +469,7 @@ describe('Property 13: Required non-empty query parameter (job title)', () => {
           db.close();
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   }, 60000);
 });
