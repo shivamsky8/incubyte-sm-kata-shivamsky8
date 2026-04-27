@@ -206,7 +206,7 @@ Returns `400` if `job_title` query parameter is missing or empty.
 
 ## AI Usage
 
-This project was built with **Kiro**, an AI assistant for spec-driven development. Kiro was used throughout the entire development lifecycle:
+This project was built with **Kiro**, an AI assistant for spec-driven development.
 
 ### Tools Used
 
@@ -215,17 +215,17 @@ This project was built with **Kiro**, an AI assistant for spec-driven developmen
 
 ### How AI Was Used
 
-**Spec-driven development:** Kiro generated the requirements document, design document, and implementation task list following a structured workflow (requirements → design → tasks). Each task mapped to a specific TDD red/green/refactor cycle.
+**Spec-driven development:** The requirements document, design document, and implementation task list following a structured workflow (requirements → design → tasks). Each task mapped to a specific TDD red/green/refactor cycle.
 
 **Representative prompts:**
 
 1. *"Create a spec for a salary management REST API based on the Incubyte hiring kata requirements"* — Generated the full requirements and design documents with acceptance criteria, API contracts, data models, and 14 correctness properties.
 
-2. *"Execute Task 5: Implement POST /employees"* — Kiro wrote the employee repository, validation logic, controller, route wiring, and integration tests in a single TDD cycle.
+2. *"Execute: Implement POST /employees"* — Kiro wrote the employee repository, validation logic, controller, route wiring, and integration tests in a single TDD cycle.
 
 3. *"Execute Task 12: Implement salary calculator service"* — Generated the salary calculator with country-specific TDS rates, half-up rounding, and both unit tests and property-based tests validating the calculation invariants.
 
-4. *"Execute Task 15: Implement GET /metrics/country endpoint"* — Built the metrics aggregation query, service layer, controller, and property tests including metamorphic ordering verification (min ≤ avg ≤ max).
+4. *"Execute: Implement GET /metrics/country endpoint"* — Built the metrics aggregation query, service layer, controller, and property tests including metamorphic ordering verification (min ≤ avg ≤ max).
 
 ### Rationale
 
