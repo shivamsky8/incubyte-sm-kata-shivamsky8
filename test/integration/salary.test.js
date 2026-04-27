@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import { createApp } from '../../src/app.js';
-import { openDb } from '../../src/db/connection.js';
+import { createTestApp } from '../helpers.js';
 
 describe('GET /employees/:id/salary', () => {
   let db;
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {

@@ -1,23 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import fc from 'fast-check';
-import { createApp } from '../../src/app.js';
-import { openDb } from '../../src/db/connection.js';
 import { roundHalfUp } from '../../src/util/money.js';
-
-// Arbitrary that generates a valid employee payload
-// Use stringMatching to produce clean alphanumeric strings and avoid prototype
-// pollution edge cases (__proto__, constructor, etc.) that fast-check can generate.
-const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,19}$/);
-
-const validEmployeeArb = fc.record({
-  full_name: safeStringArb,
-  job_title: safeStringArb,
-  country: safeStringArb,
-  gross_salary: fc
-    .integer({ min: 0, max: 100_000_000 })
-    .map((n) => n / 100),
-}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
+import { validEmployeeArb, createTestApp } from '../helpers.js';
 
 // Feature: salary-management-api, Property 1: Create-then-read round-trip
 // **Validates: Requirements 1.1, 2.1, 5.5**
@@ -26,8 +11,7 @@ describe('Property 1: Create-then-read round-trip', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -58,8 +42,7 @@ describe('Property 2: Employee_ID uniqueness', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -93,8 +76,7 @@ describe('Property 3: Invalid body rejected on write routes', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -207,8 +189,7 @@ describe('Property 4: 404 for unknown Employee_ID', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -239,8 +220,7 @@ describe('Property 5: List returns the full persisted set', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -282,8 +262,7 @@ describe('Property 6: Update round-trip preserves Employee_ID', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -327,8 +306,7 @@ describe('Property 7: Delete removes from reads and metrics', () => {
         fc.nat().map((n) => n),
         async (payloads, pickIndex) => {
           // Fresh DB per iteration
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           // Create all employees
           const created = [];

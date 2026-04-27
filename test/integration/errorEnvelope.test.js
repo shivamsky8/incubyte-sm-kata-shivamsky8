@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import fc from 'fast-check';
-import { createApp } from '../../src/app.js';
-import { openDb } from '../../src/db/connection.js';
+import { createTestApp } from '../helpers.js';
 
 // Feature: salary-management-api, Property 14: Uniform error envelope
 // **Validates: Requirements 9.1, 9.2**
@@ -11,8 +10,7 @@ describe('Property 14: Uniform error envelope', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {

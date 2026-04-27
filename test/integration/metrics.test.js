@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import fc from 'fast-check';
-import { createApp } from '../../src/app.js';
-import { openDb } from '../../src/db/connection.js';
 import { roundHalfUp } from '../../src/util/money.js';
+import {
+  safeStringArb,
+  countryArb,
+  jobTitleArb,
+  validEmployeeWithCountryArb,
+  validEmployeeWithJobTitleArb,
+  createTestApp,
+} from '../helpers.js';
 
 // ---------------------------------------------------------------------------
 // Integration tests for GET /metrics/country (Task 15.1)
@@ -14,8 +20,7 @@ describe('GET /metrics/country — integration', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -89,20 +94,6 @@ describe('GET /metrics/country — integration', () => {
 
 
 // ---------------------------------------------------------------------------
-// Shared arbitrary for valid employee payloads
-// ---------------------------------------------------------------------------
-
-const safeStringArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,19}$/);
-const countryArb = fc.constantFrom('India', 'United States', 'Germany', 'France', 'Japan');
-
-const validEmployeeArb = fc.record({
-  full_name: safeStringArb,
-  job_title: safeStringArb,
-  country: countryArb,
-  gross_salary: fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100),
-}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
-
-// ---------------------------------------------------------------------------
 // Property 10: Metrics equal reference aggregation (country)
 // Feature: salary-management-api, Property 10: Metrics equal reference aggregation (country)
 // **Validates: Requirements 7.1, 7.2**
@@ -112,11 +103,10 @@ describe('Property 10: Metrics equal reference aggregation (country)', () => {
   it('endpoint response matches JS reference aggregation', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
+        fc.array(validEmployeeWithCountryArb, { minLength: 1, maxLength: 5 }),
         countryArb,
         async (payloads, queryCountry) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           // Populate
           for (const p of payloads) {
@@ -171,8 +161,7 @@ describe('Property 11: Zero-match metrics shape (country)', () => {
       fc.asyncProperty(
         safeStringArb,
         async (country) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           const res = await request(app)
             .get(`/metrics/country?country=${encodeURIComponent(country)}`)
@@ -202,10 +191,9 @@ describe('Property 12: Metamorphic ordering of country metrics', () => {
   it('for any non-empty matched set, min ≤ avg ≤ max', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(validEmployeeArb, { minLength: 1, maxLength: 5 }),
+        fc.array(validEmployeeWithCountryArb, { minLength: 1, maxLength: 5 }),
         async (payloads) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           for (const p of payloads) {
             await request(app).post('/employees').send(p).expect(201);
@@ -250,8 +238,7 @@ describe('Property 13: Required non-empty query parameter (country)', () => {
             .map((a) => `/metrics/country?country=${encodeURIComponent(a.join(''))}`)
         ),
         async (url) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           const res = await request(app).get(url);
 
@@ -276,8 +263,7 @@ describe('GET /metrics/job-title — integration', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -347,19 +333,6 @@ describe('GET /metrics/job-title — integration', () => {
 
 
 // ---------------------------------------------------------------------------
-// Shared arbitrary for job titles
-// ---------------------------------------------------------------------------
-
-const jobTitleArb = fc.constantFrom('Engineer', 'Designer', 'Analyst', 'Manager', 'Intern');
-
-const validEmployeeWithJobTitleArb = fc.record({
-  full_name: safeStringArb,
-  job_title: jobTitleArb,
-  country: countryArb,
-  gross_salary: fc.integer({ min: 0, max: 100_000_000 }).map((n) => n / 100),
-}).map((r) => ({ full_name: r.full_name, job_title: r.job_title, country: r.country, gross_salary: r.gross_salary }));
-
-// ---------------------------------------------------------------------------
 // Feature: salary-management-api, Property 10: Metrics equal reference aggregation (job title)
 // **Validates: Requirements 8.1, 8.2**
 // ---------------------------------------------------------------------------
@@ -371,8 +344,7 @@ describe('Property 10: Metrics equal reference aggregation (job title)', () => {
         fc.array(validEmployeeWithJobTitleArb, { minLength: 1, maxLength: 5 }),
         jobTitleArb,
         async (payloads, queryJobTitle) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           // Populate
           for (const p of payloads) {
@@ -420,8 +392,7 @@ describe('Property 11: Zero-match metrics shape (job title)', () => {
       fc.asyncProperty(
         safeStringArb,
         async (jobTitle) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           const res = await request(app)
             .get(`/metrics/job-title?job_title=${encodeURIComponent(jobTitle)}`)
@@ -458,8 +429,7 @@ describe('Property 13: Required non-empty query parameter (job title)', () => {
             .map((a) => `/metrics/job-title?job_title=${encodeURIComponent(a.join(''))}`)
         ),
         async (url) => {
-          const db = openDb(':memory:');
-          const app = createApp({ db });
+          const { db, app } = createTestApp();
 
           const res = await request(app).get(url);
 

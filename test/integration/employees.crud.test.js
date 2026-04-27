@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import { createApp } from '../../src/app.js';
-import { openDb } from '../../src/db/connection.js';
+import { createTestApp } from '../helpers.js';
 
 describe('POST /employees', () => {
   let db;
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -56,8 +54,7 @@ describe('POST /employees — validation errors', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -138,8 +135,7 @@ describe('GET /employees/:id', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -181,8 +177,7 @@ describe('GET /employees', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -220,8 +215,7 @@ describe('POST /employees — invalid JSON', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -245,8 +239,7 @@ describe('PUT /employees/:id', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
@@ -324,8 +317,7 @@ describe('DELETE /employees/:id', () => {
   let app;
 
   beforeEach(() => {
-    db = openDb(':memory:');
-    app = createApp({ db });
+    ({ db, app } = createTestApp());
   });
 
   afterEach(() => {
